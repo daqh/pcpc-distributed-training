@@ -100,7 +100,7 @@ def main():
                 dirpath="checkpoints",
                 filename="tiny-gpt-{step}",
                 save_top_k=3,
-                monitor="train_loss",
+                monitor="train/loss",
                 every_n_train_steps=10,
                 save_last="link",
             ),
