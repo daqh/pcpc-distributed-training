@@ -14,7 +14,7 @@ class LitTinyGPT(L.LightningModule):
             block_size=block_size,
             n_layer=4,
             n_head=4,
-            n_embd=128,
+            n_embd=256,
             dropout=0.1,
         )
 
@@ -27,7 +27,7 @@ class LitTinyGPT(L.LightningModule):
             y.view(-1),
         )
 
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train/loss", loss, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
