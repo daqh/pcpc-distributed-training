@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from components import TinyGPT
 
 class LitTinyGPT(L.LightningModule):
+
     def __init__(self, vocab_size, block_size=32):
         super().__init__()
         self.save_hyperparameters()
