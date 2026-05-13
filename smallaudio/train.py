@@ -1,6 +1,7 @@
 import torch.nn as nn
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.strategies import DDPStrategy
 
 from datamodule import MusicGenDataModule
 from model import LitMusicGen
