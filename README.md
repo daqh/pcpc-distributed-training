@@ -15,7 +15,7 @@ chmod +x ./setup-cluster.sh
 
 ```bash
 chmod +x ./run-training.sh
-./setup-cluster.sh
+./run-training.sh
 ```
 
 A questo punto visitare l'indirizzo pubblico del master-node per monitorare i progressi dell'addestramento.
