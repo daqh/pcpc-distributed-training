@@ -7,15 +7,30 @@ Il primo passo consiste nell'[installare gcloud CLI](https://docs.cloud.google.c
 ## Creare il cluster su GCloud
 
 ```bash
-chmod +x ./setup-cluster.sh
+chmod +x setup-cluster.sh
 ./setup-cluster.sh
 ```
 
-## Lanciare l'addestramento
+## Esercitazione 1
+
+### Lanciare l'addestramento di un mini LLM
 
 ```bash
-chmod +x ./run-training.sh
-./run-training.sh
+chmod +x train-llm.sh
+./train-llm.sh
 ```
 
 A questo punto visitare l'indirizzo pubblico del master-node per monitorare i progressi dell'addestramento.
+
+## Esercitazione 2
+
+Completare l'implementazione del codice presente nella cartella `smallaudio/train.py` in modo che il task venga distribuito.
+
+Lanciare i comandi:
+
+```bash
+chmod +x finetune-audio.sh
+./finetune-audio.sh
+```
+
+### Eseguire il fine tuning di un
