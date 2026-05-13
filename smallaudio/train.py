@@ -29,7 +29,6 @@ if __name__ == "__main__":
     trainer = L.Trainer(
         max_epochs=10,
         accelerator="auto",
-        devices="auto",
         precision="32-true",
         gradient_clip_val=1.0,
         accumulate_grad_batches=8,
