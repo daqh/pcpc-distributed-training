@@ -16,7 +16,7 @@ if __name__ == "__main__":
         dataset_name="sanchit-gandhi/gtzan",
         split="train",
         batch_size=1,
-        num_workers=0,
+        num_workers=1,
         seconds=8,
     )
 
