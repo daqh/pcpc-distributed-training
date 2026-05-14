@@ -203,8 +203,9 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--share",
-        action="store_true",
+        "--no-share",
+        action="store_false",
+        dest="share",
     )
 
     return parser.parse_args()
