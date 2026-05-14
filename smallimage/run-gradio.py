@@ -4,103 +4,92 @@ from typing import Optional, Tuple
 
 import gradio as gr
 import torch
-from diffusers import StableDiffusionPipeline
+from torchvision.transforms.functional import to_pil_image
 
-from model import LightningStableDiffusionFineTuner
+from model import LightningSmallDiffusionModel
 
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-loaded_pipe: Optional[StableDiffusionPipeline] = None
+loaded_model: Optional[LightningSmallDiffusionModel] = None
 loaded_ckpt_path: Optional[str] = None
 
 
 def find_latest_checkpoint(checkpoint_dir: str) -> Path:
-    checkpoint_paths = list(Path(checkpoint_dir).glob("*.ckpt"))
+    checkpoint_root = Path(checkpoint_dir)
+
+    if not checkpoint_root.exists():
+        raise FileNotFoundError(
+            f"Checkpoint directory does not exist: {checkpoint_root.resolve()}"
+        )
+
+    checkpoint_paths = list(checkpoint_root.rglob("*.ckpt"))
 
     if not checkpoint_paths:
         raise FileNotFoundError(
-            f"No .ckpt files found in checkpoint directory: {checkpoint_dir}"
+            f"No .ckpt files found under: {checkpoint_root.resolve()}"
         )
 
     return max(checkpoint_paths, key=lambda path: path.stat().st_mtime)
 
 
-def load_latest_checkpoint(
-    checkpoint_dir: str,
-    model_name: str,
-) -> str:
-    global loaded_pipe
+def load_latest_checkpoint(checkpoint_dir: str) -> str:
+    global loaded_model
     global loaded_ckpt_path
 
-    ckpt_path = find_latest_checkpoint(checkpoint_dir)
+    try:
+        ckpt_path = find_latest_checkpoint(checkpoint_dir)
 
-    lightning_model = LightningStableDiffusionFineTuner.load_from_checkpoint(
-        checkpoint_path=str(ckpt_path),
-        model_name=model_name,
-        map_location=DEVICE,
-    )
+        model = LightningSmallDiffusionModel.load_from_checkpoint(
+            checkpoint_path=str(ckpt_path),
+            map_location=DEVICE,
+        )
 
-    lightning_model.eval()
-    lightning_model.to(DEVICE)
+        model.eval()
+        model.to(DEVICE)
 
-    pipe = StableDiffusionPipeline.from_pretrained(
-        model_name,
-        safety_checker=None,
-        requires_safety_checker=False,
-    )
+        loaded_model = model
+        loaded_ckpt_path = str(ckpt_path)
 
-    pipe.unet = lightning_model.unet
-    pipe = pipe.to(DEVICE)
+        return f"Loaded checkpoint: {ckpt_path}"
 
-    if DEVICE == "cuda":
-        pipe.enable_attention_slicing()
-
-    loaded_pipe = pipe
-    loaded_ckpt_path = str(ckpt_path)
-
-    return f"Loaded checkpoint: {ckpt_path}"
+    except Exception as error:
+        loaded_model = None
+        loaded_ckpt_path = None
+        return f"Failed to load checkpoint:\n{error}"
 
 
 @torch.inference_mode()
 def generate_image(
-    prompt: str,
-    negative_prompt: str,
     num_inference_steps: int,
-    guidance_scale: float,
     seed: int,
 ) -> Tuple[object, str]:
-    if loaded_pipe is None:
+    if loaded_model is None:
         return None, "No checkpoint loaded yet. Click 'Load latest checkpoint' first."
 
-    if not prompt.strip():
-        return None, "Please enter a prompt."
+    try:
+        images = loaded_model.sample(
+            batch_size=1,
+            num_inference_steps=num_inference_steps,
+            seed=seed,
+            device=DEVICE,
+        )
 
-    generator = torch.Generator(device=DEVICE)
+        image_tensor = images[0].detach().cpu()
+        image = to_pil_image(image_tensor)
 
-    if seed >= 0:
-        generator = generator.manual_seed(seed)
+        return image, f"Generated with: {loaded_ckpt_path}"
 
-    image = loaded_pipe(
-        prompt=prompt,
-        negative_prompt=negative_prompt or None,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-        generator=generator,
-    ).images[0]
-
-    return image, f"Generated with: {loaded_ckpt_path}"
+    except Exception as error:
+        return None, f"Generation failed:\n{error}"
 
 
-def build_app(
-    checkpoint_dir: str,
-    model_name: str,
-):
-    with gr.Blocks(title="Tiny Stable Diffusion Checkpoint Tester") as demo:
-        gr.Markdown("# Tiny Stable Diffusion Checkpoint Tester")
+def build_app(checkpoint_dir: str):
+    with gr.Blocks(title="Small Diffusion Checkpoint Tester") as demo:
+        gr.Markdown("# Small Diffusion Checkpoint Tester")
 
         gr.Markdown(
-            "Click the button to load the latest Lightning `.ckpt`, then test prompts."
+            "Click the button to load the latest Lightning `.ckpt`, then generate unconditional samples."
         )
 
         with gr.Row():
@@ -110,31 +99,13 @@ def build_app(
                 interactive=False,
             )
 
-        prompt = gr.Textbox(
-            label="Prompt",
-            value="a watercolor painting of a castle",
-        )
-
-        negative_prompt = gr.Textbox(
-            label="Negative prompt",
-            value="",
-        )
-
         with gr.Row():
             num_inference_steps = gr.Slider(
                 label="Inference steps",
                 minimum=1,
-                maximum=50,
-                value=10,
+                maximum=500,
+                value=50,
                 step=1,
-            )
-
-            guidance_scale = gr.Slider(
-                label="Guidance scale",
-                minimum=0.0,
-                maximum=15.0,
-                value=7.5,
-                step=0.5,
             )
 
             seed = gr.Number(
@@ -149,10 +120,7 @@ def build_app(
         output_status = gr.Textbox(label="Generation status", interactive=False)
 
         load_button.click(
-            fn=lambda: load_latest_checkpoint(
-                checkpoint_dir=checkpoint_dir,
-                model_name=model_name,
-            ),
+            fn=lambda: load_latest_checkpoint(checkpoint_dir=checkpoint_dir),
             inputs=None,
             outputs=load_status,
         )
@@ -160,10 +128,7 @@ def build_app(
         generate_button.click(
             fn=generate_image,
             inputs=[
-                prompt,
-                negative_prompt,
                 num_inference_steps,
-                guidance_scale,
                 seed,
             ],
             outputs=[
@@ -185,12 +150,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--model_name",
-        type=str,
-        default="hf-internal-testing/tiny-stable-diffusion-pipe",
-    )
-
-    parser.add_argument(
         "--server_name",
         type=str,
         default="0.0.0.0",
@@ -200,6 +159,12 @@ def parse_args():
         "--server_port",
         type=int,
         default=7860,
+    )
+
+    parser.add_argument(
+        "--share",
+        action="store_true",
+        default=False,
     )
 
     parser.add_argument(
@@ -216,11 +181,11 @@ if __name__ == "__main__":
 
     app = build_app(
         checkpoint_dir=args.checkpoint_dir,
-        model_name=args.model_name,
     )
 
-    app.launch(
+    app.queue().launch(
         server_name=args.server_name,
         server_port=args.server_port,
         share=args.share,
+        show_error=True,
     )

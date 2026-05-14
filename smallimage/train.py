@@ -3,8 +3,8 @@ import lightning as L
 import torch
 
 from lightning.pytorch.callbacks import ModelCheckpoint
-from model import LightningStableDiffusionFineTuner
-from datamodules import ImageCaptionDataModule
+from model import LightningSmallDiffusionModel
+from datamodules import ImageDataModule
 
 
 def parse_args():
@@ -15,10 +15,23 @@ def parse_args():
         type=str,
         default="hf-internal-testing/tiny-stable-diffusion-pipe",
     )
+
     parser.add_argument(
         "--dataset_name",
         type=str,
-        default="lambdalabs/naruto-blip-captions",
+        default="zh-plus/tiny-imagenet",
+    )
+
+    parser.add_argument(
+        "--dataset_config_name",
+        type=str,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--dataset_split",
+        type=str,
+        default="train",
     )
     parser.add_argument(
         "--train_data_dir",
@@ -40,23 +53,25 @@ def parse_args():
 
     return parser.parse_args()
 
-
 def main():
     args = parse_args()
 
     L.seed_everything(42)
 
-    model = LightningStableDiffusionFineTuner(
-        model_name=args.model_name,
+    model = LightningSmallDiffusionModel(
+        image_size=args.resolution,
+        image_channels=3,
+        base_channels=128,
+        time_emb_dim = 512,
         lr=args.lr,
     )
 
-    datamodule = ImageCaptionDataModule(
-        tokenizer=model.tokenizer,
+    datamodule = ImageDataModule(
         dataset_name=args.dataset_name,
+        dataset_config_name=args.dataset_config_name,
+        dataset_split=args.dataset_split,
         train_data_dir=args.train_data_dir,
         image_column=args.image_column,
-        caption_column=args.caption_column,
         resolution=args.resolution,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
@@ -65,17 +80,22 @@ def main():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints",
-        filename="tiny-sd-{epoch:02d}-{train_loss:.4f}",
+        filename="tiny-sd-{epoch:02d}-{train/loss:.4f}",
         save_top_k=1,
-        monitor="train_loss",
-        mode="min",
+        every_n_epochs=1,
     )
 
     trainer = L.Trainer(
         max_epochs=args.max_epochs,
         accelerator="auto",
+
+        devices=6,
+        num_nodes=3,        
+
         precision="16-mixed" if torch.cuda.is_available() else "32-true",
-        callbacks=[checkpoint_callback],
+        callbacks=[
+            checkpoint_callback,
+        ],
         log_every_n_steps=1,
     )
 
