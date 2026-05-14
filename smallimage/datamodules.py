@@ -118,10 +118,12 @@ from typing import Optional
 
 from typing import Optional
 
+from typing import Optional
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 import lightning as L
 
 
@@ -154,8 +156,6 @@ class ImageDataset(torch.utils.data.Dataset):
         item = self.dataset[idx]
 
         image = item[self.image_column]
-
-        # Some datasets can contain grayscale images.
         image = image.convert("RGB")
 
         pixel_values = self.image_transforms(image)
@@ -168,57 +168,84 @@ class ImageDataset(torch.utils.data.Dataset):
 class ImageDataModule(L.LightningDataModule):
     def __init__(
         self,
-        dataset_name: str = "zh-plus/tiny-imagenet",
-        dataset_config_name: Optional[str] = None,
-        dataset_split: str = "train",
-        train_data_dir: Optional[str] = None,
+        dataset_name: Optional[str] = "lambdalabs/naruto-blip-captions",
+        custom_data_dir: Optional[str] = None,
         image_column: str = "image",
         resolution: int = 64,
-        batch_size: int = 32,
+        batch_size: int = 8,
         num_workers: int = 4,
-        max_train_samples: Optional[int] = 10_000,
+        max_train_samples: Optional[int] = None,
+        max_hf_samples: Optional[int] = None,
+        max_custom_samples: Optional[int] = None,
+        shuffle_seed: int = 42,
     ):
         super().__init__()
 
         self.dataset_name = dataset_name
-        self.dataset_config_name = dataset_config_name
-        self.dataset_split = dataset_split
-        self.train_data_dir = train_data_dir
+        self.custom_data_dir = custom_data_dir
         self.image_column = image_column
         self.resolution = resolution
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.max_train_samples = max_train_samples
+        self.max_hf_samples = max_hf_samples
+        self.max_custom_samples = max_custom_samples
+        self.shuffle_seed = shuffle_seed
 
     def setup(self, stage=None):
-        if self.train_data_dir is not None:
-            dataset = load_dataset(
-                "imagefolder",
-                data_dir=self.train_data_dir,
-                split=self.dataset_split,
+        datasets_to_combine = []
+
+        if self.dataset_name is not None:
+            hf_dataset = load_dataset(
+                self.dataset_name,
+                split="train",
             )
+
+            if self.max_hf_samples is not None:
+                hf_dataset = hf_dataset.shuffle(seed=self.shuffle_seed).select(
+                    range(min(self.max_hf_samples, len(hf_dataset)))
+                )
+
+            datasets_to_combine.append(hf_dataset)
+
+        if self.custom_data_dir is not None:
+            custom_dataset = load_dataset(
+                "imagefolder",
+                data_dir=self.custom_data_dir,
+                split="train",
+            )
+
+            if self.max_custom_samples is not None:
+                custom_dataset = custom_dataset.shuffle(seed=self.shuffle_seed).select(
+                    range(min(self.max_custom_samples, len(custom_dataset)))
+                )
+
+            datasets_to_combine.append(custom_dataset)
+
+        if not datasets_to_combine:
+            raise ValueError(
+                "You must provide at least one of: dataset_name or custom_data_dir."
+            )
+
+        if len(datasets_to_combine) == 1:
+            train_dataset = datasets_to_combine[0]
         else:
-            if self.dataset_config_name is not None:
-                dataset = load_dataset(
-                    self.dataset_name,
-                    self.dataset_config_name,
-                    split=self.dataset_split,
-                )
-            else:
-                dataset = load_dataset(
-                    self.dataset_name,
-                    split=self.dataset_split,
-                )
+            train_dataset = concatenate_datasets(datasets_to_combine)
+
+        train_dataset = train_dataset.shuffle(seed=self.shuffle_seed)
 
         if self.max_train_samples is not None:
-            num_samples = min(self.max_train_samples, len(dataset))
-            dataset = dataset.shuffle(seed=42).select(range(num_samples))
+            train_dataset = train_dataset.select(
+                range(min(self.max_train_samples, len(train_dataset)))
+            )
 
         self.train_dataset = ImageDataset(
-            dataset=dataset,
+            dataset=train_dataset,
             image_column=self.image_column,
             resolution=self.resolution,
         )
+
+        print(f"Loaded {len(self.train_dataset)} total training images.")
 
     def train_dataloader(self):
         return DataLoader(
@@ -226,6 +253,5 @@ class ImageDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             num_workers=self.num_workers,
-            pin_memory=torch.cuda.is_available(),
-            persistent_workers=self.num_workers > 0,
+            pin_memory=True,
         )

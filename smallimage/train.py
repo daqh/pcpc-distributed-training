@@ -15,6 +15,25 @@ def parse_args():
         type=str,
         default="hf-internal-testing/tiny-stable-diffusion-pipe",
     )
+    
+    parser.add_argument(
+        "--custom_data_dir",
+        type=str,
+        default=None,
+        help="Optional local imagefolder dataset directory.",
+    )
+
+    parser.add_argument(
+        "--max_hf_samples",
+        type=int,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--max_custom_samples",
+        type=int,
+        default=None,
+    )
 
     parser.add_argument(
         "--dataset_name",
@@ -68,14 +87,14 @@ def main():
 
     datamodule = ImageDataModule(
         dataset_name=args.dataset_name,
-        dataset_config_name=args.dataset_config_name,
-        dataset_split=args.dataset_split,
-        train_data_dir=args.train_data_dir,
+        custom_data_dir=args.custom_data_dir,
         image_column=args.image_column,
         resolution=args.resolution,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         max_train_samples=args.max_train_samples,
+        max_hf_samples=args.max_hf_samples,
+        max_custom_samples=args.max_custom_samples,
     )
 
     checkpoint_callback = ModelCheckpoint(
