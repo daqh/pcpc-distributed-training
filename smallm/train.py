@@ -91,7 +91,7 @@ def main():
     trainer = L.Trainer(
         accelerator="cpu",
         max_steps=5000,
-        devices=3,      # Numero di cpu da utilizzare
+        devices=6,      # Numero di cpu da utilizzare
         num_nodes=3,    # Numero di nodi nel cluster
         precision="bf16-mixed",
         log_every_n_steps=1,

@@ -34,7 +34,7 @@ do
 
   gcloud compute instances create "$INSTANCE" \
     --zone="$ZONE" \
-    --machine-type=c4-standard-4 \
+    --machine-type=c4-highmem-8 \
     --boot-disk-size=100GB \
     --image-family=ubuntu-2404-lts-amd64 \
     --image-project=ubuntu-os-cloud \

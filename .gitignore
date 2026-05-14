@@ -222,4 +222,5 @@ __marimo__/
 # Custom
 .gradio/
 lightning_logs/
-
+checkpoints/
+finetuned-tiny-sd/

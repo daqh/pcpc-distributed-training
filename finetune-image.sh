@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/cluster-env.sh"
 
-LOCAL_PROJECT_DIR="$(pwd)/smallaudio"
-REMOTE_PROJECT_DIR="~/smallaudio"
+LOCAL_PROJECT_DIR="$(pwd)/smallimage"
+REMOTE_PROJECT_DIR="~/smallimage"
 
 install_project_dependencies() {
   local instance="$1"
@@ -19,6 +19,9 @@ install_project_dependencies() {
       set -e
 
       cd $REMOTE_PROJECT_DIR
+
+      sudo apt update
+      sudo apt install -y ffmpeg libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev
 
       python3 -m venv .venv
       source .venv/bin/activate
@@ -44,9 +47,11 @@ do
 
   echo "Copio il progetto locale su $INSTANCE..."
 
+  # Force copy
   gcloud compute scp \
     --zone="$ZONE" \
     --recurse \
+    --quiet \
     "$LOCAL_PROJECT_DIR" \
     "$INSTANCE:$REMOTE_PROJECT_DIR"
 
@@ -98,6 +103,8 @@ do
     "
 done
 
+echo "Avvio dei servizi di monitoring sul master node..."
+
 gcloud compute ssh cpu-train-node-0 \
   --zone="$ZONE" \
   --quiet \
@@ -119,7 +126,6 @@ gcloud compute ssh cpu-train-node-0 \
         --logdir lightning_logs \
         --bind_all \
         --port 6006
-
-    exec bash
+      exec bash
     '
   "
