@@ -88,10 +88,6 @@ def main():
     trainer = L.Trainer(
         max_epochs=args.max_epochs,
         accelerator="auto",
-
-        devices=6,
-        num_nodes=3,        
-
         precision="16-mixed" if torch.cuda.is_available() else "32-true",
         callbacks=[
             checkpoint_callback,
