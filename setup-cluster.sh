@@ -81,3 +81,9 @@ gcloud compute firewall-rules create allow-tensorboard-6006-public \
   --allow=tcp:6006 \
   --source-ranges=0.0.0.0/0 \
   --target-tags="$TAG" || true
+
+gcloud compute firewall-rules create allow-gradio-7860-public \
+  --network="$NETWORK" \
+  --allow=tcp:7860 \
+  --source-ranges=0.0.0.0/0 \
+  --target-tags="$TAG" || true
