@@ -24,7 +24,7 @@ A questo punto visitare l'indirizzo pubblico del master-node per monitorare i pr
 
 ## Esercitazione 2
 
-Completare l'implementazione del codice presente nella cartella `smallaudio/train.py` in modo che il task venga distribuito.
+Completare l'implementazione del codice presente nella cartella `smallimage/train.py` in modo che il task venga distribuito.
 
 Lanciare i comandi:
 

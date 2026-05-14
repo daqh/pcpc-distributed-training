@@ -1,0 +1,11 @@
+transformers==4.57.1
+torch
+scipy
+gradio
+accelerate
+torchvision
+lightning
+diffusers
+datasets
+pillow
+safetensors
