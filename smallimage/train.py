@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument("--max_train_samples", type=int, default=128)
 
     parser.add_argument("--lr", type=float, default=1e-5)
-    parser.add_argument("--max_epochs", type=int, default=100)
+    parser.add_argument("--max_epochs", type=int, default=10000)
     parser.add_argument("--output_dir", type=str, default="finetuned-tiny-sd")
 
     return parser.parse_args()
@@ -74,10 +74,6 @@ def main():
     trainer = L.Trainer(
         max_epochs=args.max_epochs,
         accelerator="auto",
-
-        devices=6,
-        num_nodes=3,
-
         precision="16-mixed" if torch.cuda.is_available() else "32-true",
         callbacks=[checkpoint_callback],
         log_every_n_steps=1,
