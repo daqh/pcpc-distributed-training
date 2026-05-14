@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument("--caption_column", type=str, default="text")
 
     parser.add_argument("--resolution", type=int, default=64)
-    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--max_train_samples", type=int, default=128)
 
@@ -61,7 +61,7 @@ def main():
     model = LightningSmallDiffusionModel(
         image_size=args.resolution,
         image_channels=3,
-        base_channels=128,
+        base_channels=256,
         time_emb_dim = 512,
         lr=args.lr,
     )
