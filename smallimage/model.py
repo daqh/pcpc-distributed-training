@@ -8,7 +8,7 @@ from diffusers import StableDiffusionPipeline, DDPMScheduler
 class LightningStableDiffusionFineTuner(L.LightningModule):
     def __init__(
         self,
-        model_name: str = "segmind/tiny-sd",
+        model_name: str = "hf-internal-testing/tiny-stable-diffusion-pipe",
         lr: float = 1e-5,
     ):
         super().__init__()
@@ -16,7 +16,6 @@ class LightningStableDiffusionFineTuner(L.LightningModule):
 
         self.pipe = StableDiffusionPipeline.from_pretrained(
             model_name,
-            torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
             safety_checker=None,
             requires_safety_checker=False,
         )
@@ -75,12 +74,11 @@ class LightningStableDiffusionFineTuner(L.LightningModule):
         loss = F.mse_loss(noise_pred.float(), noise.float())
 
         self.log(
-            "train/loss",
+            "train_loss",
             loss,
             prog_bar=True,
             on_step=True,
             on_epoch=True,
-            logger=True,
         )
 
         return loss

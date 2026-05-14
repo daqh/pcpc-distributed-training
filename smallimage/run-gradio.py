@@ -8,29 +8,19 @@ from diffusers import StableDiffusionPipeline
 
 from model import LightningStableDiffusionFineTuner
 
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 loaded_pipe: Optional[StableDiffusionPipeline] = None
 loaded_ckpt_path: Optional[str] = None
 
+
 def find_latest_checkpoint(checkpoint_dir: str) -> Path:
-    checkpoint_root = Path(checkpoint_dir)
-
-    if not checkpoint_root.exists():
-        raise FileNotFoundError(
-            f"Checkpoint directory does not exist: {checkpoint_root.resolve()}"
-        )
-
-    checkpoint_paths = list(checkpoint_root.rglob("*.ckpt"))
+    checkpoint_paths = list(Path(checkpoint_dir).glob("*.ckpt"))
 
     if not checkpoint_paths:
-        searched_path = checkpoint_root.resolve()
         raise FileNotFoundError(
-            f"No .ckpt files found under: {searched_path}\n\n"
-            "Try running:\n"
-            "  find . -name '*.ckpt'\n\n"
-            "Then start Gradio with:\n"
-            "  python run-gradio.py --checkpoint_dir /path/to/checkpoint/folder"
+            f"No .ckpt files found in checkpoint directory: {checkpoint_dir}"
         )
 
     return max(checkpoint_paths, key=lambda path: path.stat().st_mtime)
@@ -56,7 +46,6 @@ def load_latest_checkpoint(
 
     pipe = StableDiffusionPipeline.from_pretrained(
         model_name,
-        torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32,
         safety_checker=None,
         requires_safety_checker=False,
     )
@@ -135,7 +124,7 @@ def build_app(
             num_inference_steps = gr.Slider(
                 label="Inference steps",
                 minimum=1,
-                maximum=100,
+                maximum=50,
                 value=10,
                 step=1,
             )
@@ -144,7 +133,7 @@ def build_app(
                 label="Guidance scale",
                 minimum=0.0,
                 maximum=15.0,
-                value=1.0,
+                value=7.5,
                 step=0.5,
             )
 
@@ -198,7 +187,7 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="segmind/tiny-sd",
+        default="hf-internal-testing/tiny-stable-diffusion-pipe",
     )
 
     parser.add_argument(

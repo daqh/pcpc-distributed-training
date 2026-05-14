@@ -29,7 +29,7 @@ Completare l'implementazione del codice presente nella cartella `smallimage/trai
 Lanciare i comandi:
 
 ```bash
-chmod +x finetune-audio.sh
+chmod +x finetune-image.sh
 ./finetune-audio.sh
 ```
 

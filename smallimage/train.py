@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument(
         "--model_name",
         type=str,
-        default="segmind/tiny-sd",
+        default="hf-internal-testing/tiny-stable-diffusion-pipe",
     )
     parser.add_argument(
         "--dataset_name",
@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("--caption_column", type=str, default="text")
 
     parser.add_argument("--resolution", type=int, default=64)
-    parser.add_argument("--batch_size", type=int, default=5)
+    parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--max_train_samples", type=int, default=128)
 
@@ -65,18 +65,20 @@ def main():
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="checkpoints",
-        filename="tiny-sd-{epoch:02d}-{train/loss:.4f}",
+        filename="tiny-sd-{epoch:02d}-{train_loss:.4f}",
         save_top_k=1,
-        monitor="train/loss",
+        monitor="train_loss",
         mode="min",
-        every_n_train_steps=10,
     )
 
     trainer = L.Trainer(
         max_epochs=args.max_epochs,
         accelerator="auto",
 
-        precision="16-mixed",
+        devices=6,
+        num_nodes=3,
+
+        precision="16-mixed" if torch.cuda.is_available() else "32-true",
         callbacks=[checkpoint_callback],
         log_every_n_steps=1,
     )
@@ -85,6 +87,7 @@ def main():
 
     model.save_pipeline(args.output_dir)
     print(f"Saved fine-tuned pipeline to: {args.output_dir}")
+
 
 if __name__ == "__main__":
     main()

@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/cluster-env.sh"
 
-LOCAL_PROJECT_DIR="$(pwd)/smallaudio"
-REMOTE_PROJECT_DIR="~/smallaudio"
+LOCAL_PROJECT_DIR="$(pwd)/smallimage"
+REMOTE_PROJECT_DIR="~/smallimage"
 
 gcloud compute ssh cpu-train-node-0 \
   --zone="$ZONE" \
@@ -20,6 +20,7 @@ gcloud compute ssh cpu-train-node-0 \
 
     tmux kill-session -t train 2>/dev/null || true
     tmux kill-session -t tensorboard 2>/dev/null || true
+    tmux kill-session -t gradio 2>/dev/null || true
 
     tmux new-session -d -s gradio '
       cd $REMOTE_PROJECT_DIR &&
